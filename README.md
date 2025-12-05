@@ -33,7 +33,7 @@ pip install pyyaml
 
 ```
 python scripts/collect_obsidian.py \
-  --vault-path "data/Obsidian/Obsidian Vault" \
+  --vault-path "Obsidian/Obsidian Vault" \
   --output "data/processed/notes.jsonl" \
   --exclude-dir ".obsidian" \
   --exclude-tag "private"
