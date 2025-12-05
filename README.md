@@ -1,14 +1,14 @@
 # Knowledge Assistant
 
 
-### Features\n
+### Features
 - Collects all `.md` notes from an Obsidian vault
 - Parses YAML frontmatter, headings, links `[[...]]`, and inline `#tags`
 - Produces `notes.jsonl` (one JSON object per note)
 - Splits notes into chunks by sections → `chunks.jsonl`
 
 
-### Project structure\n
+### Project structure
 - `scripts/collect_obsidian.py`: scan vault → `data/processed/notes.jsonl`
 - `scripts/preprocess_obsidian.py`: notes → sections → sentence chunks → `data/processed/chunks.jsonl`
 - `data/processed/notes.jsonl`: collected notes
