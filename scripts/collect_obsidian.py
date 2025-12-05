@@ -169,7 +169,6 @@ def iter_markdown_files(vault_path: str, exclude_dirs: List[str]) -> List[str]:
 
 
 def main() -> None:
-    print("[DEBUG] collect_obsidian стартовал")
 
     parser = argparse.ArgumentParser(
         description="Собирает заметки Obsidian в единый JSONL-файл."
