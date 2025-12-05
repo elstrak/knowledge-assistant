@@ -1,12 +1,8 @@
-#!/usr/bin/env python
-
 import json
 import os
 import re
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Optional
-
-print("[DEBUG] preprocess_obsidian.py: файл импортирован, код выполняется.")
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 
@@ -164,5 +160,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    print("[DEBUG] __main__ ветка — вызываем main()")
     main()
