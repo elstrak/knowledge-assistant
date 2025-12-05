@@ -1,15 +1,25 @@
-#!/usr/bin/env python
-
 import json
 import os
 import re
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Optional
 
-print("[DEBUG] preprocess_obsidian.py: файл импортирован, код выполняется.")
-
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 
+def clean_markdown(text: str) -> str:
+    """
+    Лёгкая очистка markdown, чтобы предложения читались ровнее.
+    """
+    # заголовки "# ", "## " и т.п.
+    text = re.sub(r'^\s*#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # маркеры списков "* ", "- ", "1. " и т.д.
+    text = re.sub(r'^\s*[-*+]\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
+    # лишние подчёркивания/разделители
+    text = re.sub(r'[_*`]{2,}', ' ', text)
+    # несколько пробелов/переносов → один пробел
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
 
 @dataclass
 class Chunk:
@@ -21,6 +31,101 @@ class Chunk:
     tags: List[str]
     links: List[str]
     position: int
+
+def split_into_sentences(text: str) -> List[str]:
+    """
+    Очень простой sentence splitter
+    Берём всё, что заканчивается на . ? ! … и т.п., плюс остаток.
+    """
+    text = text.strip()
+    if not text:
+        return []
+
+    text = re.sub(r'\s+', ' ', text)
+
+    sentence_end_re = re.compile(r'(.+?[.!?…]+)(\s+|$)')
+    sentences = []
+    last_end = 0
+
+    for m in sentence_end_re.finditer(text):
+        sent = m.group(1).strip()
+        if sent:
+            sentences.append(sent)
+        last_end = m.end()
+
+    tail = text[last_end:].strip()
+    if tail:
+        sentences.append(tail)
+
+    return sentences
+
+
+def chunk_text(text: str, chunk_size: int, overlap: int) -> List[str]:
+    """
+    Чанкует текст по предложениям
+    """
+    text = clean_markdown(text)
+    if not text:
+        return []
+
+    sentences = split_into_sentences(text)
+    if not sentences:
+        return []
+
+    chunks: List[str] = []
+    current_sentences: List[str] = []
+    current_tokens = 0
+
+    def count_words(s: str) -> int:
+        return len(s.split())
+
+    for sent in sentences:
+        sent_tokens = count_words(sent)
+
+        # Если предложение само по себе больше chunk_size — положим его отдельным чанком
+        # (иначе застрянем в бесконечном разбиении).
+        if sent_tokens >= chunk_size:
+            # сначала закрываем текущий чанк, если он есть
+            if current_sentences:
+                chunks.append(" ".join(current_sentences))
+                current_sentences = []
+                current_tokens = 0
+            chunks.append(sent)
+            continue
+
+        # Попробуем добавить предложение в текущий чанк
+        if current_tokens + sent_tokens <= chunk_size:
+            current_sentences.append(sent)
+            current_tokens += sent_tokens
+        else:
+            # Текущий чанк заполнен → закрываем его
+            if current_sentences:
+                chunks.append(" ".join(current_sentences))
+
+                # Делаем overlap по словам: берём последние overlap слов
+                if overlap > 0:
+                    merged = " ".join(current_sentences)
+                    words = merged.split()
+                    if len(words) > overlap:
+                        overlap_words = words[-overlap:]
+                    else:
+                        overlap_words = words  # чанк и так маленький
+                    overlap_text = " ".join(overlap_words)
+                    current_sentences = [overlap_text, sent]
+                    current_tokens = count_words(overlap_text) + sent_tokens
+                else:
+                    current_sentences = [sent]
+                    current_tokens = sent_tokens
+            else:
+                # если почему-то текущий пуст (крайний случай) — просто начинаем новый
+                current_sentences = [sent]
+                current_tokens = sent_tokens
+
+    # добиваем последний чанк
+    if current_sentences:
+        chunks.append(" ".join(current_sentences))
+
+    return chunks
 
 
 def split_into_sections(content: str, note_title: str) -> List[Tuple[str, str]]:
@@ -61,29 +166,7 @@ def split_into_sections(content: str, note_title: str) -> List[Tuple[str, str]]:
     return result
 
 
-def chunk_text(text: str, chunk_size: int, overlap: int) -> List[str]:
-    words = text.split()
-    n = len(words)
-    if n == 0:
-        return []
-
-    chunks: List[str] = []
-    start = 0
-    while start < n:
-        end = min(n, start + chunk_size)
-        chunk_words = words[start:end]
-        chunks.append(" ".join(chunk_words))
-    # продолжение цикла
-        if end >= n:
-            break
-        start = max(0, end - overlap)
-
-    return chunks
-
-
 def main() -> None:
-    print("[DEBUG] main() стартовал")
-
     input_path = os.path.abspath("processed/notes.jsonl")
     output_path = os.path.abspath("processed/chunks.jsonl")
 
@@ -164,5 +247,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    print("[DEBUG] __main__ ветка — вызываем main()")
     main()
