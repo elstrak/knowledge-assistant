@@ -34,6 +34,20 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+### Dependencies
+The baseline pipeline is designed to run without heavy ML stacks.
+
+Core dependencies (used in baseline):
+- `PyYAML`: YAML frontmatter parsing
+- `numpy`: baseline embeddings + cosine retrieval
+- `tqdm`: progress bars
+- `fastapi`, `uvicorn`: local HTTP API
+- `requests`: utilities / simple HTTP client
+
+Optional (quality/speed upgrades, not required for baseline):
+- `sentence-transformers` (+ `torch`): semantic embeddings
+- `hnswlib`: fast ANN vector index (HNSW)
+
 
 ### Quickstart (end-to-end)
 
