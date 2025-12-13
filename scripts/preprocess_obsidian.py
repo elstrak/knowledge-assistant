@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import argparse
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Optional
 
@@ -167,25 +168,58 @@ def split_into_sections(content: str, note_title: str) -> List[Tuple[str, str]]:
 
 
 def main() -> None:
-    input_path = os.path.abspath("processed/notes.jsonl")
-    output_path = os.path.abspath("processed/chunks.jsonl")
+    parser = argparse.ArgumentParser(
+        description="Чанкует собранные заметки Obsidian (notes.jsonl) в chunks.jsonl."
+    )
+    parser.add_argument(
+        "--input",
+        default="dataset/processed/notes.jsonl",
+        help="Путь к входному JSONL с заметками (по умолчанию: dataset/processed/notes.jsonl)",
+    )
+    parser.add_argument(
+        "--output",
+        default="dataset/processed/chunks.jsonl",
+        help="Путь к выходному JSONL с чанками (по умолчанию: dataset/processed/chunks.jsonl)",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=300,
+        help="Размер чанка в словах (примерно). По умолчанию: 300",
+    )
+    parser.add_argument(
+        "--overlap",
+        type=int,
+        default=60,
+        help="Overlap в словах между чанками. По умолчанию: 60",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Печатать отладочную информацию (первые N заметок/чанков).",
+    )
 
-    print(f"[DEBUG] Ожидаемый вход: {input_path}")
-    print(f"[DEBUG] Ожидаемый выход: {output_path}")
-    print(f"[DEBUG] Текущая директория: {os.getcwd()}")
+    args = parser.parse_args()
+
+    input_path = os.path.abspath(os.path.expanduser(args.input))
+    output_path = os.path.abspath(os.path.expanduser(args.output))
+    chunk_size = args.chunk_size
+    overlap = args.overlap
+    verbose = args.verbose
+
+    print(f"[INFO] Input: {input_path}")
+    print(f"[INFO] Output: {output_path}")
+    print(f"[INFO] chunk_size={chunk_size}, overlap={overlap}")
 
     if not os.path.isfile(input_path):
-        print("[ERROR] Файл processed/notes.jsonl не найден.")
-        return
+        raise SystemExit(f"[ERROR] Input файл не найден: {input_path}")
 
     if os.path.getsize(input_path) == 0:
-        print("[ERROR] processed/notes.jsonl пустой.")
-        return
+        raise SystemExit(f"[ERROR] Input файл пустой: {input_path}")
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-    chunk_size = 800
-    overlap = 200
+    out_dir = os.path.dirname(output_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
 
     count_notes = 0
     count_chunks = 0
@@ -207,13 +241,13 @@ def main() -> None:
             content = note.get("content", "") or ""
 
             count_notes += 1
-            if count_notes <= 3:
+            if verbose and count_notes <= 3:
                 print(f"[DEBUG] Обрабатываю заметку #{count_notes}: {note_id} (title={note_title})")
 
             chunk_index = 0
 
             sections = split_into_sections(content, note_title)
-            if count_notes <= 3:
+            if verbose and count_notes <= 3:
                 print(f"[DEBUG]   Секций в заметке: {len(sections)}")
 
             for section_title, section_text in sections:
@@ -225,7 +259,7 @@ def main() -> None:
                     chunk_index += 1
                     count_chunks += 1
 
-                    if count_chunks <= 5:
+                    if verbose and count_chunks <= 5:
                         print(f"[DEBUG]   Создаю чанк #{chunk_index} для {note_id} "
                               f"(section={section_title[:30]!r})")
 

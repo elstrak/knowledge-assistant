@@ -1,0 +1,11 @@
+dataset/
+.venv/
+.venv311/
+.venv*/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+notes.jsonl
+chunks.jsonl
+
