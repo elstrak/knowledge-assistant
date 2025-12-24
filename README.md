@@ -48,6 +48,27 @@ Optional (quality/speed upgrades, not required for baseline):
 - `sentence-transformers` (+ `torch`): semantic embeddings
 - `hnswlib`: fast ANN vector index (HNSW)
 
+### Environment
+
+This project loads environment variables from a `.env` file in the repo root (via `python-dotenv`). 
+
+Setup:
+- Copy example here to .env
+- Fill your LLM API key
+- Optionally adjust defaults and retrieval tuning
+
+```
+KA_LLM_BASE_URL=https://api.mistral.ai
+KA_LLM_MODEL=mistral-large-latest
+KA_LLM_API_KEY=YOUR_KEY
+
+KA_LLM_TIMEOUT_S=60
+KA_CONTEXT_CHARS=12000
+KA_MAX_CHUNKS_PER_NOTE=2
+KA_RRF_K=60
+KA_LLM_MAX_TOKENS=1200
+KA_LLM_TEMPERATURE=0.2
+```
 
 ### Quickstart (end-to-end)
 
@@ -93,18 +114,18 @@ uvicorn ka.server:app --host 127.0.0.1 --port 8000
 ```
 
 
-### Baseline evaluation
+### Evaluation
 
-1) Create a validation set (weak supervision from `chunks.jsonl`)
-
-```
-python scripts/make_validation_set.py --chunks "dataset/processed/chunks.jsonl" --out "dataset/validation/validation.jsonl" --n 100
-```
-
-2) Compute retrieval metrics
+1) Use a validation set to compute retrieval metrics
 
 ```
-python scripts/evaluate.py --index "dataset/index" --val "dataset/validation/validation.jsonl" --k 5
+python scripts/evaluate_retriever.py --index dataset/index --validation dataset/validation/validation_set.jsonl --k 1,3,5,10
+```
+
+2) Use a validation set to evaluate generator
+
+```
+python scripts/evaluate_rag.py --index dataset/index --validation dataset/validation/validation_set.jsonl --k 5 --judge --judge_n 20
 ```
 
 

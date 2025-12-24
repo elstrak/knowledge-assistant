@@ -1,4 +1,5 @@
-dataset/
+dataset/index
+dataset/processed
 .venv/
 .venv311/
 .venv*/
@@ -8,4 +9,5 @@ __pycache__/
 *.pyd
 notes.jsonl
 chunks.jsonl
+.env
 

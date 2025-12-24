@@ -5,7 +5,7 @@ import argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from ka.embeddings import EmbeddingConfig
-from ka.rag import build_index
+from ka.indexing import build_index
 
 
 def main() -> None:

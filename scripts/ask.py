@@ -5,8 +5,10 @@ import argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from ka.agent import AgentLoop, Tools
-from ka.rag import Retriever
+from ka.retriever import Retriever
 
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=".env")
 
 def main() -> None:
     def safe_write(s: str) -> None:

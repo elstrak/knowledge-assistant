@@ -5,8 +5,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from ka.agent import AgentLoop, Tools
-from ka.rag import Retriever
+from ka.retriever import Retriever
 
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=".env")
 
 class AskRequest(BaseModel):
     question: str
@@ -37,7 +39,7 @@ def create_app(
 
     @app.post("/ask", response_model=AskResponse)
     def ask(req: AskRequest) -> AskResponse:
-        answer, calls = agent.run(req.question)
+        answer, calls = agent.run(req.question, k=req.k or 5)
         return AskResponse(
             answer=answer,
             tool_calls=[{"name": c.name, "args": c.args} for c in calls],
