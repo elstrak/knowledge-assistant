@@ -6,12 +6,18 @@ from ka.retriever import RetrievalHit
 
 def sources_block(hits: List[RetrievalHit], max_sources: int = 10) -> str:
     """Deterministic sources block appended to the answer."""
-#def _format_sources(hits: List[RetrievalHit]) -> str:
     if not hits:
         return ""
     lines = ["", "Источники:"]
     for i, h in enumerate(hits, start=1):
-        lines.append(f"{i}) {h.note_id} ({h.chunk_id}) — {h.title} → {h.section}")
+        # Экранируем HTML в названиях заметок и разделов
+        # Некоторые разделы могут называться <class>, <code>, etc.
+        note_id = h.note_id.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        chunk_id = h.chunk_id.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        title = h.title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        section = h.section.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        
+        lines.append(f"{i}) {note_id} ({chunk_id}) — {title} → {section}")
     return "\n".join(lines)
 
 
@@ -61,24 +67,36 @@ def answer_with_llm(question: str, hits: List[RetrievalHit], llm: Optional[LLMCl
     if not hits:
         return "Не нашёл релевантных фрагментов в базе."
 
+    import logging
+    logger = logging.getLogger(__name__)
+    
     llm = llm or get_default_llm()
     if llm is None:
+        logger.warning("LLM клиент не инициализирован, используем extractive режим")
         return answer_extractively(question, hits)
 
     system = (
         "Ты — ассистент по базе заметок Obsidian. "
-        "Отвечай ТОЛЬКО на основе предоставленного контекста. "
-        "Если в контексте нет ответа — так и скажи и предложи, что уточнить. "
-        "Не выдумывай факты и не добавляй внешние знания."
-        "НЕ добавляй список источников — я добавлю источники сам в конце."
+        "Отвечай на основе предоставленного контекста из заметок. "
+        "Используй информацию из контекста для формирования полного и полезного ответа. "
+        "Если в контексте есть релевантная информация — используй её. "
+        "Если информации недостаточно — скажи что знаешь из контекста и предложи уточнить. "
+        "Отвечай на русском языке, структурированно и понятно. "
+        "Используй ТОЛЬКО markdown для форматирования (НЕ используй HTML теги). "
+        "Для кода используй тройные обратные кавычки ```language ... ```. "
+        "НЕ добавляй список источников в конце — источники будут добавлены отдельно."
     )
 
     context = build_llm_context(hits)
-    user = f"Вопрос: {question}\n\nКонтекст (используй только его):\n{context}"
+    user = f"Вопрос: {question}\n\nКонтекст из заметок:\n{context}\n\nСформируй полный и полезный ответ на основе этого контекста."
 
     try:
+        logger.info("Отправляю запрос в LLM...")
+        logger.debug(f"Контекст для LLM ({len(context)} символов): {context[:200]}...")
         answer = llm.chat(system=system, user=user)
-    except Exception:
+        logger.info(f"Получен ответ от LLM ({len(answer)} символов)")
+    except Exception as e:
+        logger.error(f"Ошибка при вызове LLM: {e}", exc_info=True)
         return answer_extractively(question, hits)
 
     return (answer.strip() + sources_block(hits)).strip()

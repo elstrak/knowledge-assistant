@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: .
+    container_name: knowledge-assistant-bot
+    restart: unless-stopped
+    volumes:
+      # Монтируем данные (индекс, заметки, чанки)
+      - ./dataset:/app/dataset
+      # Монтируем .env для конфигурации
+      - ./.env:/app/.env
+    environment:
+      # Переменные можно задать здесь или в .env файле
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - KA_LLM_API_KEY=${KA_LLM_API_KEY}
+      - KA_LLM_BASE_URL=${KA_LLM_BASE_URL:-https://api.mistral.ai}
+      - KA_LLM_MODEL=${KA_LLM_MODEL:-mistral-large-latest}
+      - KA_INDEX_PATH=dataset/index
+      - KA_NOTES_PATH=dataset/processed/notes.jsonl
+      - KA_ANSWER_MODE=llm
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+

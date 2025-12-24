@@ -1,5 +1,6 @@
 dataset/index
 dataset/processed
+dataset/validation
 .venv/
 .venv311/
 .venv*/
@@ -10,4 +11,4 @@ __pycache__/
 notes.jsonl
 chunks.jsonl
 .env
-
+README_CHECKPOINT2.md
